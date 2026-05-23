@@ -1,0 +1,22 @@
+# Copie este arquivo para terraform.tfvars e preencha com seus valores
+
+# Credenciais Proxmox
+proxmox_user     = "root"
+proxmox_password = "sua-senha-aqui"
+
+# Configurações do Proxmox
+proxmox_node  = "pve"
+template_name = "ubuntu-cloud-template"
+storage_pool  = "local-lvm"
+
+# Configurações de Rede
+gateway = "192.168.15.1"
+
+# Configurações das VMs
+vm_user     = "admin"
+vm_password = "senha-vm-aqui"
+
+# Chave SSH pública (conteúdo do arquivo ~/.ssh/id_rsa.pub)
+ssh_public_key = <<-EOT
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... seu-usuario@hostname
+EOT
