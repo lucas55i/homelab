@@ -1,0 +1,17 @@
+---
+- name: Teste de conectividade em todas as VMs
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Ping
+      ansible.builtin.ping:
+
+    - name: Uptime
+      ansible.builtin.command: uptime
+      register: uptime_result
+      changed_when: false
+
+    - name: Exibir uptime
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} ({{ ansible_host }}) -> {{ uptime_result.stdout }}"

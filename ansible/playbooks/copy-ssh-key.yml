@@ -1,0 +1,24 @@
+---
+- name: Copiar chave SSH para todas as VMs
+  hosts: all
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Garantir que o diretório .ssh existe com permissões corretas
+      ansible.builtin.file:
+        path: /home/luffy/.ssh
+        state: directory
+        mode: '0700'
+        owner: luffy
+        group: luffy
+
+    - name: Adicionar chave pública homelab ao authorized_keys
+      ansible.posix.authorized_key:
+        user: luffy
+        state: present
+        key: "{{ lookup('file', '~/.ssh/homelab.pub') }}"
+
+    - name: Confirmar chave adicionada
+      ansible.builtin.debug:
+        msg: "Chave SSH adicionada com sucesso em {{ inventory_hostname }}"
