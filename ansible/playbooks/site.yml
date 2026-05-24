@@ -4,3 +4,9 @@
   become: yes
   roles:
     - common
+
+- name: Configurar Docker hosts
+  hosts: docker
+  become: yes
+  roles:
+    - docker

@@ -1,0 +1,89 @@
+---
+- name: Remover versões antigas do Docker
+  apt:
+    name:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - runc
+    state: absent
+
+- name: Adicionar GPG Docker
+  apt_key:
+    url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+    state: present
+
+- name: Adicionar repositório Docker
+  apt_repository:
+    repo: >
+      deb [arch=amd64]
+      https://download.docker.com/linux/{{ ansible_distribution | lower }}
+      {{ ansible_distribution_release }}
+      stable
+    state: present
+
+- name: Instalar Docker
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+
+- name: Adicionar usuário ao grupo docker
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: Iniciar e habilitar Docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Configurar Docker daemon
+  copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        },
+        "storage-driver": "overlay2"
+      }
+  notify: Reiniciar Docker
+
+- name: Criar diretório para docker-compose
+  file:
+    path: "/home/{{ ansible_user }}/docker"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Adicionar aliases úteis
+  lineinfile:
+    path: "/home/{{ ansible_user }}/.bashrc"
+    line: "{{ item }}"
+    state: present
+  loop:
+    - "alias dc='docker compose'"
+    - "alias dps='docker ps'"
+    - "alias dimg='docker images'"
+
+- name: Validar se Docker está respondendo
+  command: docker images
+  register: docker_check
+  changed_when: false
+  failed_when: docker_check.rc != 0
+
+- name: Exibir resultado Docker
+  debug:
+    var: docker_check.stdout_lines
