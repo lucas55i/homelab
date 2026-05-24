@@ -1,0 +1,13 @@
+---
+- name: Configurar sudo sem senha para luffy
+  hosts: all
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Adicionar luffy ao sudoers sem senha
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/luffy
+        content: "luffy ALL=(ALL) NOPASSWD:ALL\n"
+        mode: '0440'
+        validate: /usr/sbin/visudo -cf %s
