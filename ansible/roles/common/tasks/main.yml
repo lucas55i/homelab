@@ -1,0 +1,76 @@
+---
+- name: Atualizar cache do apt
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Atualizar todos os pacotes
+  apt:
+    upgrade: dist
+    autoremove: yes
+    autoclean: yes
+
+- name: Instalar pacotes essenciais
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - vim
+      - htop
+      - net-tools
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - software-properties-common
+    state: present
+
+- name: Configurar timezone
+  timezone:
+    name: America/Sao_Paulo
+
+- name: Configurar hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Adicionar hostname ao /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ ansible_host }} {{ inventory_hostname }}"
+    state: present
+
+- name: Desabilitar swap
+  shell: swapoff -a
+  when: ansible_swaptotal_mb > 0
+
+- name: Remover swap do fstab
+  lineinfile:
+    path: /etc/fstab
+    regexp: '.*swap.*'
+    state: absent
+
+- name: Configurar módulos do kernel
+  copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+
+- name: Carregar módulos do kernel
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - overlay
+    - br_netfilter
+
+- name: Configurar parâmetros sysctl
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
+    - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
+    - { name: 'net.ipv4.ip_forward', value: '1' }
