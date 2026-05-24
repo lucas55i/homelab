@@ -10,3 +10,10 @@
   become: yes
   roles:
     - docker
+
+- name: Configurar cluster K3s
+  hosts: k3s
+  become: yes
+  roles:
+    - k3s
+    
