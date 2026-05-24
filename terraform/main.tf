@@ -21,37 +21,38 @@ resource "proxmox_vm_qemu" "k3s_nodes" {
   name        = "k3s-node-${count.index + 1}"
   target_node = var.proxmox_node
   clone       = var.template_name
-  
-  # Configurações de CPU e Memória
+  full_clone  = true
+
   cores   = 2
   sockets = 1
   memory  = 2048
-  
-  # Configurações de Disco
+
+  scsihw = "virtio-scsi-pci"
+  boot   = "order=scsi0"
+  agent  = 0
+
   disk {
+    slot    = 0
     size    = "15G"
     type    = "scsi"
-    storage = var.storage_pool
+    storage = "local-lvm"
+    format  = "raw"
   }
-  
-  # Configurações de Rede
+
   network {
     model  = "virtio"
     bridge = var.network_bridge
   }
-  
-  # Cloud-init
+
   os_type   = "cloud-init"
   ipconfig0 = "ip=${var.k3s_ip_base}.${count.index + 10}/24,gw=${var.gateway}"
-  
+
   ciuser     = var.vm_user
   cipassword = var.vm_password
   sshkeys    = var.ssh_public_key
-  
-  # Iniciar automaticamente
+
   onboot = true
-  
-  tags = "k3s,kubernetes"
+  tags   = "k3s,kubernetes"
 }
 
 # VMs para Docker
@@ -60,35 +61,36 @@ resource "proxmox_vm_qemu" "docker_nodes" {
   name        = "docker-node-${count.index + 1}"
   target_node = var.proxmox_node
   clone       = var.template_name
-  
-  # Configurações de CPU e Memória
+  full_clone  = true
+
   cores   = 2
   sockets = 1
   memory  = 2048
-  
-  # Configurações de Disco
+
+  scsihw = "virtio-scsi-pci"
+  boot   = "order=scsi0"
+  agent  = 0
+
   disk {
+    slot    = 0
     size    = "10G"
     type    = "scsi"
-    storage = var.storage_pool
+    storage = "local-lvm"
+    format  = "raw"
   }
-  
-  # Configurações de Rede
+
   network {
     model  = "virtio"
     bridge = var.network_bridge
   }
-  
-  # Cloud-init
+
   os_type   = "cloud-init"
   ipconfig0 = "ip=${var.docker_ip_base}.${count.index + 20}/24,gw=${var.gateway}"
-  
+
   ciuser     = var.vm_user
   cipassword = var.vm_password
   sshkeys    = var.ssh_public_key
-  
-  # Iniciar automaticamente
+
   onboot = true
-  
-  tags = "docker,containers"
+  tags   = "docker,containers"
 }

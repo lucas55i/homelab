@@ -30,7 +30,7 @@ variable "proxmox_node" {
 variable "template_name" {
   description = "Nome do template de VM no Proxmox"
   type        = string
-  default     = "ubuntu-cloud-template"
+  default     = "Debian-lab00"
 }
 
 variable "storage_pool" {
