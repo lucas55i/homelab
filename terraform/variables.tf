@@ -45,8 +45,8 @@ variable "network_bridge" {
   default     = "vmbr0"
 }
 
-variable "k3s_ip_base" {
-  description = "Base do IP para nodes K3s"
+variable "k8s_ip_base" {
+  description = "Base do IP para nodes k8s"
   type        = string
   default     = "192.168.15"
 }
