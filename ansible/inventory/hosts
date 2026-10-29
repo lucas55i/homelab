@@ -1,18 +1,18 @@
-[k3s_master]
-k3s-node-1 ansible_host=192.168.15.111
+[k8s_master]
+k8s-master ansible_host=192.168.15.10
 
-[k3s_workers]
-k3s-node-2 ansible_host=192.168.15.89
+[k8s_workers]
+k8s-worker-01 ansible_host=192.168.15.134
+k8s-worker-02 ansible_host=192.168.15.3
 
-[docker]
-docker-node-1 ansible_host=192.168.15.121
-docker-node-2 ansible_host=192.168.15.43
-
-[k3s:children]
-k3s_master
-k3s_workers
+[k8s:children]
+k8s_master
+k8s_workers
 
 [all:vars]
 ansible_user=luffy
-ansible_ssh_private_key_file="~/.ssh/homelab"
+ansible_ssh_private_key_file=~/.ssh/homelab
+ansible_become=true
+ansible_become_method=sudo
+ansible_become_password=vocesabe
 ansible_ssh_common_args='-o StrictHostKeyChecking=no'

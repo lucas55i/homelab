@@ -1,7 +1,7 @@
 variable "proxmox_api_url" {
   description = "URL da API do Proxmox"
   type        = string
-  default     = "https://192.168.15.18:8006/api2/json"
+  default     = "http://192.168.15.18:8006/api2/json"
 }
 
 variable "proxmox_user" {
@@ -45,16 +45,38 @@ variable "network_bridge" {
   default     = "vmbr0"
 }
 
-variable "k8s_ip_base" {
-  description = "Base do IP para nodes k8s"
-  type        = string
-  default     = "192.168.15"
-}
-
-variable "docker_ip_base" {
-  description = "Base do IP para nodes Docker"
-  type        = string
-  default     = "192.168.15"
+variable "k3s_nodes" {
+  description = "Mapa dos nós do cluster K3s (chave = nome/hostname da VM)"
+  type = map(object({
+    ip        = string
+    cores     = number
+    memory    = number
+    disk_size = string
+    tags      = string
+  }))
+  default = {
+    luffy = {
+      ip        = "192.168.15.10"
+      cores     = 1
+      memory    = 2048
+      disk_size = "32G"
+      tags      = "k3s,kubernetes,control-plane,linux,lab"
+    }
+    zoro = {
+      ip        = "192.168.15.134"
+      cores     = 1
+      memory    = 2048
+      disk_size = "32G"
+      tags      = "k3s,kubernetes,worker,linux,lab"
+    }
+    sanji = {
+      ip        = "192.168.15.3"
+      cores     = 1
+      memory    = 2048
+      disk_size = "32G"
+      tags      = "k3s,kubernetes,worker,linux,lab"
+    }
+  }
 }
 
 variable "gateway" {

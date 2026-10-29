@@ -15,27 +15,38 @@ provider "proxmox" {
   pm_tls_insecure = var.proxmox_tls_insecure
 }
 
-# VMs para K3s Cluster
-resource "proxmox_vm_qemu" "k8s_master" {
-  count       = 1
-  name        = "k8s-master"
+# -----------------------------------------------------------------------------
+# Cluster K3s (3 nós rodando em um único host Proxmox)
+#
+#   luffy  -> 192.168.15.10   (control-plane / master)
+#   zoro   -> 192.168.15.134  (worker)
+#   sanji  -> 192.168.15.3    (worker)
+#
+# Specs reais coletadas das VMs: 1 vCPU, 2048 MB RAM, disco de 32 GB.
+# Os nós são definidos via for_each (var.k3s_nodes) porque os IPs não são
+# sequenciais, então count/index não representaria a realidade.
+# -----------------------------------------------------------------------------
+resource "proxmox_vm_qemu" "k3s_nodes" {
+  for_each = var.k3s_nodes
+
+  name        = each.key
   target_node = var.proxmox_node
   clone       = var.template_name
   full_clone  = true
 
-  cores   = 2
+  cores   = each.value.cores
   sockets = 1
-  memory  = 2048
+  memory  = each.value.memory
 
   scsihw = "virtio-scsi-pci"
   boot   = "order=scsi0"
-  agent  = 0
+  agent  = 1
 
   disk {
     slot    = 0
-    size    = "15G"
+    size    = each.value.disk_size
     type    = "scsi"
-    storage = "local-lvm"
+    storage = var.storage_pool
     format  = "raw"
   }
 
@@ -45,130 +56,12 @@ resource "proxmox_vm_qemu" "k8s_master" {
   }
 
   os_type   = "cloud-init"
-  ipconfig0 = "ip=${var.k8s_ip_base}.${count.index + 10}/24,gw=${var.gateway}"
+  ipconfig0 = "ip=${each.value.ip}/24,gw=${var.gateway}"
 
   ciuser     = var.vm_user
   cipassword = var.vm_password
   sshkeys    = var.ssh_public_key
 
   onboot = true
-  tags   = "k3s,kubernetes"
+  tags   = each.value.tags
 }
-
-resource "proxmox_vm_qemu" "k8s_worker01" {
-  count       = 1
-  name        = "k8s-worker-0${count.index + 1}"
-  target_node = var.proxmox_node
-  clone       = var.template_name
-  full_clone  = true
-
-  cores   = 2
-  sockets = 1
-  memory  = 2048
-
-  scsihw = "virtio-scsi-pci"
-  boot   = "order=scsi0"
-  agent  = 0
-
-  disk {
-    slot    = 0
-    size    = "15G"
-    type    = "scsi"
-    storage = "local-lvm"
-    format  = "raw"
-  }
-
-  network {
-    model  = "virtio"
-    bridge = var.network_bridge
-  }
-
-  os_type   = "cloud-init"
-  ipconfig0 = "ip=${var.k8s_ip_base}.${count.index + 10}/24,gw=${var.gateway}"
-
-  ciuser     = var.vm_user
-  cipassword = var.vm_password
-  sshkeys    = var.ssh_public_key
-
-  onboot = true
-  tags   = "k3s,kubernetes"
-}
-
-resource "proxmox_vm_qemu" "k8s_worker02" {
-  count       = 1
-  name        = "k8s-worker-0${count.index + 2}"
-  target_node = var.proxmox_node
-  clone       = var.template_name
-  full_clone  = true
-
-  cores   = 2
-  sockets = 1
-  memory  = 2048
-
-  scsihw = "virtio-scsi-pci"
-  boot   = "order=scsi0"
-  agent  = 0
-
-  disk {
-    slot    = 0
-    size    = "15G"
-    type    = "scsi"
-    storage = "local-lvm"
-    format  = "raw"
-  }
-
-  network {
-    model  = "virtio"
-    bridge = var.network_bridge
-  }
-
-  os_type   = "cloud-init"
-  ipconfig0 = "ip=${var.k8s_ip_base}.${count.index + 10}/24,gw=${var.gateway}"
-
-  ciuser     = var.vm_user
-  cipassword = var.vm_password
-  sshkeys    = var.ssh_public_key
-
-  onboot = true
-  tags   = "k3s,kubernetes"
-}
-
-# VMs para Docker
-# resource "proxmox_vm_qemu" "docker_nodes" {
-#   count       = 2
-#   name        = "docker-node-${count.index + 1}"
-#   target_node = var.proxmox_node
-#   clone       = var.template_name
-#   full_clone  = true
-
-#   cores   = 2
-#   sockets = 1
-#   memory  = 2048
-
-#   scsihw = "virtio-scsi-pci"
-#   boot   = "order=scsi0"
-#   agent  = 0
-
-#   disk {
-#     slot    = 0
-#     size    = "10G"
-#     type    = "scsi"
-#     storage = "local-lvm"
-#     format  = "raw"
-#   }
-
-#   network {
-#     model  = "virtio"
-#     bridge = var.network_bridge
-#   }
-
-#   os_type   = "cloud-init"
-#   ipconfig0 = "ip=${var.docker_ip_base}.${count.index + 20}/24,gw=${var.gateway}"
-
-#   ciuser     = var.vm_user
-#   cipassword = var.vm_password
-#   sshkeys    = var.ssh_public_key
-
-#   onboot = true
-#   tags   = "docker,containers"
-# }
