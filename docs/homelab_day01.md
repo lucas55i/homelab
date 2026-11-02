@@ -157,3 +157,8 @@ ansible-playbook playbooks/site.yml -b
 - [ ] Testar deploy de aplicação no cluster k3s
 - [ ] Testar deploy de container no Docker
 - [ ] Configurar monitoramento (Prometheus + Grafana)
+
+> **Nota (02/11/2026):** a verificação de conectividade mostrou que o NOPASSWD
+> descrito aqui **não** está ativo nas VMs atuais — o sudo ainda pede senha e o
+> `become` depende de `ansible_become_password` no inventário. Os IPs/nós deste
+> registro também já não correspondem à infra atual. Veja `homelab_day02.md`.

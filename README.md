@@ -25,8 +25,17 @@ Este projeto foi testado em ambiente real e **funciona**, mas você encontrará 
 ## Componentes
 
 - **Proxmox**: Hypervisor (192.168.15.18:8006)
-- **K3s Cluster**: 2 VMs para Kubernetes leve
-- **Docker Hosts**: 2 VMs para containers Docker
+- **K3s Cluster**: 3 VMs para Kubernetes leve
+  - `luffy` (control-plane) — 192.168.15.10
+  - `zoro` (worker) — 192.168.15.134
+  - `sanji` (worker) — 192.168.15.3
+
+> **Estado atual (verificado em 02/11/2026):** as 3 VMs do cluster K3s estão
+> up e acessíveis via SSH/Ansible. A topologia antiga de "2 K3s + 2 Docker"
+> (descrita em `docs/homelab_day00.md` e `day01.md` com IPs via DHCP) pertence a
+> uma iteração anterior e não existe mais. Veja `docs/homelab_day02.md` para o
+> relatório completo de conectividade e as divergências conhecidas entre
+> `terraform/`, `ansible/inventory/hosts` e `site.yml`.
 
 ## Pré-requisitos
 

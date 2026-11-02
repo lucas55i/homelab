@@ -243,3 +243,8 @@ ansible-playbook playbooks/ping.yml
 - [ ] Instalar k3s nos `k3s_nodes` via Ansible
 - [ ] Configurar IPs estáticos nas VMs (remover dependência do DHCP)
 - [ ] Adicionar chave SSH ao template para evitar o processo manual nas próximas VMs
+
+> **Nota (02/11/2026):** este registro descreve uma iteração anterior com 4 VMs
+> em IPs DHCP (`.111`/`.89`/`.121`/`.43`), que não existe mais. A infra atual é o
+> cluster de 3 nós K3s com IPs estáticos (`.10`/`.134`/`.3`). Veja
+> `homelab_day02.md`.
