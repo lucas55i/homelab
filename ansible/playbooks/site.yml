@@ -5,6 +5,10 @@
   roles:
     - common
 
+# O grupo "docker" está vazio na infra atual (só existe o cluster K3s de 3 nós).
+# O role é mantido para um host Docker dedicado no futuro; enquanto o grupo
+# estiver vazio este play é um no-op. Não instalar Docker nos nós K3s: eles já
+# usam containerd como runtime. Ver docs/homelab_day02.md.
 - name: Configurar Docker hosts
   hosts: docker
   become: yes

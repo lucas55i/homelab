@@ -151,8 +151,78 @@ sudo k3s kubectl get nodes -o wide
 
 ---
 
-## 8. Próximos Passos
+## 8. Reconciliação e continuidade (passos 1–4)
 
-- [ ] Reconciliar a fonte de verdade: alinhar nomes/grupos/IPs entre `terraform/`, `ansible/inventory/hosts` e `site.yml`
-- [ ] Reimportar as VMs para o state do Terraform (`terraform import`) ou aceitar que são gerenciadas manualmente
-- [ ] Rodar `site.yml` após corrigir os grupos do inventário (`k3s`, e `docker` se ainda fizer sentido) — isso também resolve o aviso de resolução de nome (`/etc/hosts`)
+### 8.1 Inventário e site.yml reconciliados ✅
+
+`ansible/inventory/hosts` foi alinhado à realidade do Terraform:
+
+- Nomes `k8s-master`/`k8s-worker-01/02` → `luffy`/`zoro`/`sanji`.
+- Grupos `k8s_*` → `k3s`/`k3s_master`/`k3s_workers` (o que o role `k3s`, o
+  `site.yml` e o `outputs.tf` esperam).
+- Adicionado grupo `docker` vazio (ver 8.3).
+
+Validado: `ansible-inventory --graph` mostra a árvore correta e
+`ansible k3s -b -m command -a hostname` retorna `luffy`/`zoro`/`sanji`.
+
+> **Nota:** o `site.yml` completo **não foi executado**. O role `common` roda
+> `apt upgrade dist` + mexe em swap/kernel em `hosts: all`, o que é arriscado num
+> cluster K3s já em produção. Rodar só sob decisão explícita e janela adequada.
+
+### 8.2 Deploy de teste no K3s ✅
+
+Validado deploy funcional: o `deployment/nginx-teste` (pré-existente, criado via
+`kubectl` solto) responde **HTTP 200** via ClusterIP, com pods distribuídos em
+`zoro` e `sanji`. Criado manifesto versionado em `k8s/nginx-teste.yaml` e
+aplicado, trocando o Service de `LoadBalancer` para `ClusterIP`. Resultado: os
+pods `svclb-nginx-teste-*` em Pending (resíduo citado na seção 7) **foram
+eliminados**. Rollout concluído com imagem `nginx:stable`.
+
+### 8.3 Papel do Docker (decisão) ✅
+
+Não há host Docker na infra atual (só o cluster K3s de 3 nós). Decisão:
+**manter** o role `docker` para um host dedicado futuro, **sem** instalar Docker
+nos nós K3s (que já usam containerd). O grupo `docker` fica vazio e o play
+correspondente no `site.yml` vira no-op (`--list-hosts` → 0 hosts). Comentário
+explicativo adicionado ao `site.yml`.
+
+### 8.4 Terraform state (BLOQUEADO) ⚠️
+
+Objetivo: importar as 3 VMs para o state (hoje vazio). Mapeamento confirmado via
+API do Proxmox (node `proxmox`):
+
+| Terraform key | IP | VMID |
+|---|---|---|
+| `luffy` | 192.168.15.10 | 102 |
+| `zoro` | 192.168.15.134 | 103 |
+| `sanji` | 192.168.15.3 | 101 |
+
+O `terraform import ... proxmox/qemu/<vmid>` **falhou**: o provider
+`telmate/proxmox 2.9.14` crasha ao ler o recurso:
+
+```
+panic: interface conversion: interface {} is string, not float64
+  em NewConfigQemuFromApi (config_qemu.go:584)
+```
+
+É o bug conhecido do provider (citado no README) — incompatibilidade de parsing
+entre a versão 2.9.x do provider e a API do Proxmox atual. Não é credencial nem
+endereço. O state continua limpo (0 recursos, não corrompeu).
+
+**Desbloqueio possível:** atualizar o provider para `telmate/proxmox ~> 3.x` ou
+migrar para `bpg/proxmox` — ambos exigem reescrever o `main.tf` para a sintaxe
+nova e revalidar, o que é uma mudança maior (fora do escopo deste passo).
+
+---
+
+## 9. Próximos Passos
+
+- [ ] Decidir o upgrade do provider Proxmox (2.9 → 3.x ou `bpg/proxmox`) para
+      destravar o import do state e parar de depender do provider que crasha
+- [ ] Modernizar o role `docker`: `apt_key`/`apt_repository` estão deprecados
+      (serão removidos no ansible-core 2.25) → migrar para `deb822_repository`;
+      `arch=amd64` fixo → usar `dpkg --print-architecture`
+- [ ] (Opcional) Rodar `site.yml`/role `common` em janela controlada para
+      resolver o aviso de resolução de nome (`/etc/hosts`)
+- [ ] Trocar a senha `vocesabe` (ainda no histórico do Git; usada também no
+      `terraform.tfvars` local para Proxmox e VMs)

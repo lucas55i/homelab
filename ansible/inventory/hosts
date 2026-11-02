@@ -1,13 +1,18 @@
-[k8s_master]
-k8s-master ansible_host=192.168.15.10
+[k3s_master]
+luffy ansible_host=192.168.15.10
 
-[k8s_workers]
-k8s-worker-01 ansible_host=192.168.15.134
-k8s-worker-02 ansible_host=192.168.15.3
+[k3s_workers]
+zoro ansible_host=192.168.15.134
+sanji ansible_host=192.168.15.3
 
-[k8s:children]
-k8s_master
-k8s_workers
+[k3s:children]
+k3s_master
+k3s_workers
+
+# Nenhum host dedicado a Docker na infra atual (apenas o cluster K3s de 3 nós).
+# Mantido como grupo vazio para o play "docker" do site.yml não falhar.
+# Ver docs/homelab_day02.md, seção 3.2.
+[docker]
 
 [all:vars]
 ansible_user=luffy

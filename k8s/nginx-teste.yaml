@@ -1,0 +1,53 @@
+# Deploy de teste para validar o cluster K3s.
+# Substitui o recurso "nginx-teste" criado manualmente via kubectl (sem
+# manifesto) há ~85 dias. O Service foi trocado de LoadBalancer para ClusterIP
+# para eliminar os pods svclb-* em Pending (conflito de porta 80 com o Traefik).
+#
+# Aplicar:   kubectl apply -f k8s/nginx-teste.yaml
+# Remover:   kubectl delete -f k8s/nginx-teste.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-teste
+  namespace: default
+  labels:
+    app: nginx-teste
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-teste
+  template:
+    metadata:
+      labels:
+        app: nginx-teste
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:stable
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-teste
+  namespace: default
+  labels:
+    app: nginx-teste
+spec:
+  type: ClusterIP
+  selector:
+    app: nginx-teste
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
