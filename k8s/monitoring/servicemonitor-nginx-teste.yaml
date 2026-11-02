@@ -1,0 +1,39 @@
+# =============================================================================
+# ServiceMonitor — exercício de aprendizado
+# =============================================================================
+# Objetivo: fazer o Prometheus (via Operator) descobrir e raspar o Service
+# nginx-teste. Como o nginx padrão NÃO expõe /metrics, o target vai aparecer
+# como DOWN no Prometheus — e tudo bem: o foco aqui é entender o MECANISMO de
+# descoberta, não ter a métrica verde.
+#
+# Aplicar:  kubectl apply -f k8s/monitoring/servicemonitor-nginx-teste.yaml
+# Ver:      Prometheus UI -> Status -> Targets (procure "nginx-teste")
+# =============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nginx-teste
+  namespace: monitoring
+  labels:
+    # IMPORTANTE: o Prometheus deste chart só "enxerga" ServiceMonitors que
+    # tenham esta label. É o "release" do helm install (monitoring).
+    # Sem ela, o Operator ignora este objeto. (Confirmaremos o valor exato.)
+    release: monitoring
+spec:
+  # 1) QUAIS Services monitorar? Casa com as labels do Service nginx-teste.
+  #    TODO (você define): preencha com a label real do Service.
+  #    Dica: `kubectl get svc nginx-teste -n default --show-labels`
+  selector:
+    matchLabels:
+      app: nginx-teste # TODO: confirme se a label do Service é essa mesmo
+
+  # 2) EM QUAL namespace procurar o Service? Ele está em "default".
+  namespaceSelector:
+    matchNames:
+      - default
+
+  # 3) QUAL porta raspar e com que frequência?
+  endpoints:
+    - port: http # TODO: tem que bater com o NOME da porta no Service
+      path: /metrics # nginx padrao nao tem isso -> target ficara DOWN (esperado)
+      interval: 30s

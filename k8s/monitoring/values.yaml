@@ -1,0 +1,122 @@
+# =============================================================================
+# values.yaml — kube-prometheus-stack (perfil ENXUTO para homelab 3x 2GB RAM)
+# =============================================================================
+# Este arquivo NÃO repete os ~5000 valores padrão do chart. Ele só SOBRESCREVE
+# o que importa pro nosso caso. Tudo que não estiver aqui usa o default.
+#
+# Perfil enxuto: Alertmanager DESLIGADO, retenção curta, recursos reduzidos.
+# Instalar:
+#   helm install monitoring prometheus-community/kube-prometheus-stack \
+#     -n monitoring --create-namespace -f k8s/monitoring/values.yaml
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# ALERTMANAGER — desligado no perfil enxuto (economia de RAM).
+# Liga depois quando quiser aprender alertas.
+# -----------------------------------------------------------------------------
+alertmanager:
+  enabled: false
+
+# -----------------------------------------------------------------------------
+# PROMETHEUS — o componente mais pesado. Aqui mora o trade-off RAM x histórico.
+# -----------------------------------------------------------------------------
+prometheus:
+  prometheusSpec:
+    # Quanto tempo de métrica guardar. Mais tempo = mais disco e mais RAM.
+    # TODO (você define): comece baixo, ex: "3d" ou "7d".
+    retention: "7d" # TODO: ex "7d"
+
+    # Teto de tamanho do banco em disco. Protege o PVC de encher.
+    # TODO (você define): ex "5GiB" (deve ser menor que o tamanho do PVC abaixo).
+    retentionSize: "6GiB" # TODO: ex "5GiB"
+
+    # Persistência em disco via StorageClass local-path (já é default no cluster).
+    # Sem isso, perder o pod = perder as métricas.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              # TODO (você define): tamanho do PVC. Ex "8Gi".
+              # Regra: maior que o retentionSize pra sobrar folga.
+              storage: "8Gi" # PVC usa unidade Kubernetes (Gi, nao GiB)
+
+    # Limites de CPU/memória do Prometheus. Crítico nos seus nós de 2GB.
+    # requests = reserva garantida | limits = teto (acima disso, risco de OOMKill)
+    resources:
+      requests:
+        cpu: "100m" # TODO: ex "100m"
+        memory: "256Mi" # TODO: ex "256Mi"
+      limits:
+        cpu: "500m" # TODO: ex "500m"
+        memory: "512Mi" # TODO: ex "512Mi"
+
+# -----------------------------------------------------------------------------
+# GRAFANA — UI de dashboards. Já vem com datasource do Prometheus e dashboards.
+# -----------------------------------------------------------------------------
+grafana:
+  enabled: true
+
+  # Senha do usuário admin. TODO (você define) — NÃO comitar senha real depois;
+  # por ora, pra aprender, pode deixar uma simples aqui.
+  adminPassword: "vocesabe" # TODO: ex "homelab"
+
+  # Persistência dos dashboards/config que você criar na UI.
+  persistence:
+    enabled: true
+    storageClassName: local-path
+    accessModes: ["ReadWriteOnce"]
+    size: "2Gi" # TODO: ex "2Gi"
+
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "160Mi"
+    limits:
+      cpu: "300m"
+      # Grafana 13 (distroless) tem boot pesado; 256Mi era justo demais e
+      # deixava o start lento. 384Mi dá folga sem estourar os nos de 2GB.
+      memory: "384Mi"
+
+  # O Grafana 13 demora pra abrir a porta 3000 no 1o boot (apiserver +
+  # migrations + indice de busca) em hardware modesto. As probes padrao do
+  # chart matavam o pod antes dele ficar pronto, gerando restart em loop.
+  # Afrouxamos os tempos pra tolerar esse boot lento.
+  livenessProbe:
+    initialDelaySeconds: 120   # espera 2min antes de comecar a checar
+    timeoutSeconds: 30
+    periodSeconds: 15
+    failureThreshold: 10
+  readinessProbe:
+    initialDelaySeconds: 30
+    timeoutSeconds: 10
+    periodSeconds: 15
+    failureThreshold: 10
+
+# -----------------------------------------------------------------------------
+# EXPORTERS — leves, mas deixo explícito pra você ver que existem.
+# -----------------------------------------------------------------------------
+# node-exporter: 1 pod por nó (DaemonSet), métricas de SO (CPU/RAM/disco/rede).
+nodeExporter:
+  enabled: true
+
+# kube-state-metrics: estado dos objetos do Kubernetes (pods, deploys, etc.).
+kubeStateMetrics:
+  enabled: true
+
+# -----------------------------------------------------------------------------
+# COMPONENTES DE CONTROL-PLANE que o k3s NÃO expõe da forma padrão.
+# No k3s, etcd/scheduler/controller-manager/kube-proxy rodam embutidos e não
+# têm os endpoints de métrica nas portas que o chart espera. Desligar evita
+# "targets DOWN" vermelhos no Prometheus (ruído pra quem está aprendendo).
+# -----------------------------------------------------------------------------
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
