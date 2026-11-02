@@ -113,7 +113,45 @@ segredo.
 
 ---
 
-## 7. Próximos Passos
+## 7. Validação do cluster K3s
+
+Verificado via SSH direto nos três nós (binário, serviço systemd e estado do
+cluster). O cluster está **operacional e com os 3 nós `Ready`**.
+
+| Node | IP | Papel | Serviço ativo | Status |
+|---|---|---|---|---|
+| `luffy` | 192.168.15.10 | control-plane | `k3s` (server) | Ready |
+| `zoro` | 192.168.15.134 | worker | `k3s-agent` | Ready |
+| `sanji` | 192.168.15.3 | worker | `k3s-agent` | Ready |
+
+- Versão: `v1.36.3+k3s1` | runtime: `containerd 2.3.2-k3s2` | Debian 12 / kernel 6.1.
+- Health da API: `GET /readyz` → `ok`.
+- `kube-system` saudável: `coredns`, `local-path-provisioner`, `metrics-server`
+  e `traefik` todos `Running`; jobs `helm-install-traefik*` em `Completed`.
+
+```bash
+sudo k3s kubectl get nodes -o wide
+# NAME    STATUS   ROLES           VERSION
+# luffy   Ready    control-plane   v1.36.3+k3s1
+# sanji   Ready    <none>          v1.36.3+k3s1
+# zoro    Ready    <none>          v1.36.3+k3s1
+```
+
+### Observações
+
+- **O K3s não foi instalado pelo role `k3s` desta iteração.** O `AGE` dos nós e
+  dos pods é de ~85 dias (os RESTARTS recentes batem com o reboot das VMs). O
+  cluster já existia e persiste entre reboots (`onboot=true` no Terraform +
+  serviços systemd habilitados). Isso é coerente com o fato de o role `k3s`
+  nunca ter rodado com o inventário atual (grupos `k3s`/`k3s_master`
+  inexistentes — ver seção 3.2).
+- **Resíduo de teste:** há 3 pods `svclb-nginx-teste-*` em `Pending` (Service
+  tipo LoadBalancer de um deploy de teste antigo, provável conflito de porta
+  80/443 com o Traefik). Não afeta o cluster; candidato a limpeza.
+
+---
+
+## 8. Próximos Passos
 
 - [ ] Reconciliar a fonte de verdade: alinhar nomes/grupos/IPs entre `terraform/`, `ansible/inventory/hosts` e `site.yml`
 - [ ] Reimportar as VMs para o state do Terraform (`terraform import`) ou aceitar que são gerenciadas manualmente
