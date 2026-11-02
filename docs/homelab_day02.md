@@ -81,10 +81,40 @@ Depois disso, remover a linha do inventário e considerar limpar o histórico do
 
 ---
 
-## 6. Próximos Passos
+## 6. Ações executadas nesta sessão
 
-- [ ] Rodar `playbooks/sudoers.yml` para ativar NOPASSWD nas VMs atuais
-- [ ] Remover `ansible_become_password` do inventário (após o passo acima) ou migrar para Ansible Vault
+### 6.1 NOPASSWD ativado
+
+Rodado `ansible-playbook playbooks/sudoers.yml`. Resultado: `changed=1`, `failed=0`
+nos três hosts. Criado `/etc/sudoers.d/luffy` (mode `0440`, dono `root`),
+validado via `visudo`.
+
+```
+k8s-master    : ok=1  changed=1  unreachable=0  failed=0
+k8s-worker-01 : ok=1  changed=1  unreachable=0  failed=0
+k8s-worker-02 : ok=1  changed=1  unreachable=0  failed=0
+```
+
+Verificação com senha vazia forçada (`-e ansible_become_password=`): os três
+hosts elevaram para `root` com sucesso, confirmando o NOPASSWD.
+
+### 6.2 Senha removida do inventário
+
+Removida a linha `ansible_become_password=vocesabe` de
+`ansible/inventory/hosts`. O `ansible all -b -m command -a "id -un"` continua
+retornando `root` nos três hosts sem a senha — o inventário não depende mais do
+segredo.
+
+> **Pendência de segurança remanescente:** a senha `vocesabe` ainda está no
+> **histórico do Git**. Como não é mais usada pelo Ansible, o risco é menor, mas
+> se for reutilizada em outro lugar o ideal é trocá-la. Limpar o histórico
+> (`git filter-repo` / BFG) reescreve hashes — avaliar conforme o repo esteja
+> compartilhado ou não.
+
+---
+
+## 7. Próximos Passos
+
 - [ ] Reconciliar a fonte de verdade: alinhar nomes/grupos/IPs entre `terraform/`, `ansible/inventory/hosts` e `site.yml`
 - [ ] Reimportar as VMs para o state do Terraform (`terraform import`) ou aceitar que são gerenciadas manualmente
-- [ ] Rodar `site.yml` após corrigir os grupos do inventário (`k3s`, e `docker` se ainda fizer sentido)
+- [ ] Rodar `site.yml` após corrigir os grupos do inventário (`k3s`, e `docker` se ainda fizer sentido) — isso também resolve o aviso de resolução de nome (`/etc/hosts`)
